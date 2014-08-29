@@ -19,6 +19,7 @@
 package org.apache.streams.data.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.streams.jackson.StreamsJacksonMapper;
 import org.apache.streams.pojo.json.Activity;
 
@@ -61,7 +62,7 @@ public class ActivityUtil {
      */
     public static final String LOCATION_EXTENSION_COORDINATES = "coordinates";
 
-    private ObjectMapper mapper = StreamsJacksonMapper.getInstance();
+    private static final ObjectMapper mapper = StreamsJacksonMapper.getInstance();
 
     /**
      * Creates a standard extension property
@@ -70,12 +71,28 @@ public class ActivityUtil {
      */
     @SuppressWarnings("unchecked")
     public static Map<String, Object> ensureExtensions(Activity activity) {
-        Map<String, Object> properties = (Map)activity.getAdditionalProperties().get(EXTENSION_PROPERTY);
-        if(properties == null) {
-            properties = new HashMap<String, Object>();
-            activity.setAdditionalProperty(EXTENSION_PROPERTY, properties);
+        Map<String, Object> extensions = (Map)activity.getAdditionalProperties().get(EXTENSION_PROPERTY);
+        if(extensions == null) {
+            extensions = new HashMap<String, Object>();
+            activity.setAdditionalProperty(EXTENSION_PROPERTY, extensions);
         }
-        return properties;
+        return extensions;
+    }
+
+    /**
+     * Creates a standard extension property
+     * @param object objectnode to create the property in
+     * @return the Map representing the extensions property
+     */
+    @SuppressWarnings("unchecked")
+    public static Map<String, Object> ensureExtensions(ObjectNode object) {
+        ObjectNode extensions = (ObjectNode)object.get(EXTENSION_PROPERTY);
+        if(extensions == null) {
+            extensions =  mapper.createObjectNode();
+            object.put(EXTENSION_PROPERTY, extensions);
+        }
+        Map<String, Object> extensionsMap = mapper.convertValue(extensions, Map.class);
+        return extensionsMap;
     }
 
     /**
