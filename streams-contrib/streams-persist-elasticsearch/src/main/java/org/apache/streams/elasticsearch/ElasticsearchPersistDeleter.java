@@ -28,6 +28,8 @@ import org.elasticsearch.action.update.UpdateRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+
 public class ElasticsearchPersistDeleter extends ElasticsearchPersistWriter implements StreamsPersistWriter {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(ElasticsearchPersistDeleter.class);
@@ -44,21 +46,22 @@ public class ElasticsearchPersistDeleter extends ElasticsearchPersistWriter impl
     public void write(StreamsDatum streamsDatum) {
 
         Preconditions.checkNotNull(streamsDatum);
-        Preconditions.checkNotNull(streamsDatum.getDocument());
         Preconditions.checkNotNull(streamsDatum.getMetadata());
-        Preconditions.checkNotNull(streamsDatum.getMetadata().get("id"));
 
-        String index;
-        String type;
-        String id;
+        LOGGER.debug("Delete Metadata: {}", streamsDatum.getMetadata());
 
-        index = Optional.fromNullable(
-                (String) streamsDatum.getMetadata().get("index"))
-                .or(config.getIndex());
-        type = Optional.fromNullable(
-                (String) streamsDatum.getMetadata().get("type"))
-                .or(config.getType());
-        id = (String) streamsDatum.getMetadata().get("id");
+        String index = (String) streamsDatum.getMetadata().get("index");
+        String type = (String) streamsDatum.getMetadata().get("type");
+        String id = setId(streamsDatum);
+
+        if(index == null || (config.getForceUseConfig() != null && config.getForceUseConfig())) {
+            index = config.getIndex();
+        }
+        if(type == null || (config.getForceUseConfig() != null && config.getForceUseConfig())) {
+            type = config.getType();
+        }
+
+        LOGGER.debug("Attempt Delete: ({},{},{})", index, type, id);
 
         delete(index, type, id);
 

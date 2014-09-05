@@ -57,7 +57,7 @@ public class AccountTypeProcessor implements StreamsProcessor {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(AccountTypeProcessor.class);
 
-    private ObjectMapper mapper = StreamsJacksonMapper.getInstance();
+    private ObjectMapper mapper;
 
     private PeoplePatternConfiguration peoplePatternConfiguration = null;
 
@@ -115,34 +115,17 @@ public class AccountTypeProcessor implements StreamsProcessor {
         CloseableHttpClient httpclient = HttpClients.createDefault();
 
         CloseableHttpResponse response = null;
+
+        String entityString = null;
         try {
-            //response = httpclient.execute(httpget, context);
             response = httpclient.execute(httpget);
             HttpEntity entity = response.getEntity();
             // TODO: handle rate-limiting
             if (response.getStatusLine().getStatusCode() == 200 && entity != null) {
-                String entityString = EntityUtils.toString(entity);
-
-                LOGGER.debug(entityString);
-
-                AccountType accountType = mapper.readValue(entityString, AccountType.class);
-
-                Map<String, Object> extensions = ActivityUtil.ensureExtensions(mapper.convertValue(actor, ObjectNode.class));
-
-                extensions.put(EXTENSION, accountType);
-
-                actor.setAdditionalProperty(ActivityUtil.EXTENSION_PROPERTY, extensions);
-
-                LOGGER.debug("Actor: {}", actor);
-
-                activity.setActor(actor);
-
-                entry.setDocument(activity);
-
-                result.add(entry);
+                entityString = EntityUtils.toString(entity);
             }
         } catch (IOException e) {
-            LOGGER.error("IO error {} - {}", uri.toString(), response);
+            LOGGER.error("IO error:\n{}\n{}\n{}", uri.toString(), response, e.getMessage());
             return result;
         } finally {
             try {
@@ -153,12 +136,41 @@ public class AccountTypeProcessor implements StreamsProcessor {
             } catch (IOException e) {}
         }
 
+        if( entityString == null )
+            return result;
+
+        LOGGER.debug(entityString);
+
+        AccountType accountType;
+        try {
+            accountType = mapper.readValue(entityString, AccountType.class);
+        } catch (IOException e) {
+            LOGGER.error("IO error:\n{}\n{}\n{}", uri.toString(), response, e.getMessage());
+            return result;
+        }
+
+        Map<String, Object> extensions = ActivityUtil.ensureExtensions(mapper.convertValue(actor, ObjectNode.class));
+
+        extensions.put(EXTENSION, accountType);
+
+        actor.setAdditionalProperty(ActivityUtil.EXTENSION_PROPERTY, extensions);
+
+        LOGGER.debug("Actor: {}", actor);
+
+        activity.setActor(actor);
+
+        entry.setDocument(activity);
+
+        result.add(entry);
+
+
         return result;
 
     }
 
     @Override
     public void prepare(Object configurationObject) {
+        mapper = StreamsJacksonMapper.getInstance();
         // TODO: one client object
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(peoplePatternConfiguration.getUsername());
@@ -166,7 +178,6 @@ public class AccountTypeProcessor implements StreamsProcessor {
         stringBuilder.append(peoplePatternConfiguration.getPassword());
         String string = stringBuilder.toString();
         authHeader = Base64.encodeBase64String(string.getBytes());
-
     }
 
     @Override

@@ -164,7 +164,7 @@ public class ElasticsearchPersistWriter implements StreamsPersistWriter, DatumSt
         }
     }
 
-    private String setId(StreamsDatum streamsDatum) {
+    protected String setId(StreamsDatum streamsDatum) {
         String id = Optional.fromNullable(
                 (String) streamsDatum.getMetadata().get("id"))
                 .orNull();

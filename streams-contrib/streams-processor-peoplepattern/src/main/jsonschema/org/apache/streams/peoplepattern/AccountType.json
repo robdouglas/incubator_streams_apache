@@ -12,6 +12,7 @@
                 "organization",
                 "entertainment",
                 "adult",
+                "spam",
                 "no-prediction"
             ],
             "default": "no-prediction"
