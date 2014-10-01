@@ -3,14 +3,12 @@ package org.apache.streams.datasift.csdl;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import org.apache.commons.lang3.text.StrSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
 
 public class DatasiftCsdlUtil {
 
@@ -117,7 +115,6 @@ public class DatasiftCsdlUtil {
         return csdlBuilder.toString();
     }
 
-    //public static String csdlMultifieldMatch(Multimap<String, String> includes, Multimap<String, String> excludes) throws Exception {
     public static String csdlMultifieldMatch(Multimap<String, String> require1, Multimap<String, String> require2, Multimap<String, String> exclude) throws Exception {
 
         StringBuilder csdlBuilder = new StringBuilder();
