@@ -12,15 +12,9 @@
     <artifactId>streams-persist-hdfs</artifactId>
 
     <properties>
-        <hdfs.version>2.0.0-cdh4.5.0</hdfs.version>
+        <hadoop-common.version>2.2.0</hadoop-common.version>
+        <hdfs.version>2.2.0</hdfs.version>
     </properties>
-
-    <repositories>
-        <repository>
-            <id>cloudera</id>
-            <url>https://repository.cloudera.com/artifactory/repo</url>
-        </repository>
-    </repositories>
 
     <dependencies>
         <dependency>
@@ -46,7 +40,7 @@
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
-            <version>${hdfs.version}</version>
+            <version>${hadoop-common.version}</version>
             <scope>compile</scope>
             <type>jar</type>
         </dependency>
