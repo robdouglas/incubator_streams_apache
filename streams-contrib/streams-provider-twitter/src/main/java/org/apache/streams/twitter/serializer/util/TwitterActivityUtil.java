@@ -191,7 +191,7 @@ public class TwitterActivityUtil {
                         .or(Optional.of(user.getId().toString()))
                         .orNull()
         ));
-
+        actor.setObjectType("page");
         actor.setDisplayName(user.getName());
         actor.setAdditionalProperty("handle", user.getScreenName());
         actor.setSummary(user.getDescription());

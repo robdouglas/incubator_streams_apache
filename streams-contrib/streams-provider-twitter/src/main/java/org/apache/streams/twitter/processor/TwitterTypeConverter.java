@@ -28,12 +28,10 @@ import org.apache.streams.core.StreamsDatum;
 import org.apache.streams.core.StreamsProcessor;
 import org.apache.streams.exceptions.ActivitySerializerException;
 import org.apache.streams.pojo.json.Activity;
-import org.apache.streams.twitter.pojo.Delete;
-import org.apache.streams.twitter.pojo.Retweet;
-import org.apache.streams.twitter.pojo.Tweet;
-import org.apache.streams.twitter.pojo.UserstreamEvent;
+import org.apache.streams.twitter.pojo.*;
 import org.apache.streams.twitter.provider.TwitterEventClassifier;
-import org.apache.streams.twitter.serializer.*;
+import org.apache.streams.twitter.serializer.StreamsTwitterMapper;
+import org.apache.streams.twitter.serializer.TwitterJsonActivitySerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,6 +78,16 @@ public class TwitterTypeConverter implements StreamsProcessor {
     public Object convert(ObjectNode event, Class inClass, Class outClass) throws ActivitySerializerException, JsonProcessingException {
 
         Object result = null;
+
+        if ( inClass.equals( FriendList.class )) {
+            LOGGER.debug("FRIENDLIST");
+            return null;
+        }
+
+        if ( inClass.equals( UserstreamEvent.class )) {
+            LOGGER.debug("USERSTREAMEVENT");
+            return null;
+        }
 
         if( outClass.equals( Activity.class )) {
             LOGGER.debug("ACTIVITY");
