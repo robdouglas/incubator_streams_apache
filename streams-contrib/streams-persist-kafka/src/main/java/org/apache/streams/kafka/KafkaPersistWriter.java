@@ -36,7 +36,7 @@ import java.util.Properties;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class KafkaPersistWriter implements StreamsPersistWriter, Serializable, Runnable {
+public class KafkaPersistWriter implements StreamsPersistWriter, Serializable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaPersistWriter.class);
 
@@ -49,18 +49,10 @@ public class KafkaPersistWriter implements StreamsPersistWriter, Serializable, R
     private Producer<String, String> producer;
 
     public KafkaPersistWriter() {
-        Config config = StreamsConfigurator.config.getConfig("kafka");
-        this.config = KafkaConfigurator.detectConfiguration(config);
-        this.persistQueue  = new ConcurrentLinkedQueue<StreamsDatum>();
+       this(KafkaConfigurator.detectConfiguration(StreamsConfigurator.config.getConfig("kafka")));
     }
 
-    public KafkaPersistWriter(Queue<StreamsDatum> persistQueue) {
-        Config config = StreamsConfigurator.config.getConfig("kafka");
-        this.config = KafkaConfigurator.detectConfiguration(config);
-        this.persistQueue = persistQueue;
-    }
-
-    public void setConfig(KafkaConfiguration config) {
+    public KafkaPersistWriter(KafkaConfiguration config) {
         this.config = config;
     }
 
@@ -71,6 +63,7 @@ public class KafkaPersistWriter implements StreamsPersistWriter, Serializable, R
         props.put("serializer.class", "kafka.serializer.StringEncoder");
         props.put("partitioner.class", "org.apache.streams.kafka.StreamsPartitioner");
         props.put("request.required.acks", "1");
+        props.put("auto.create.topics.enable", "true");
 
         ProducerConfig config = new ProducerConfig(props);
 
@@ -79,27 +72,13 @@ public class KafkaPersistWriter implements StreamsPersistWriter, Serializable, R
         new Thread(new KafkaPersistWriterTask(this)).start();
     }
 
-    public void stop() {
-        producer.close();
-    }
-
-    public void setPersistQueue(Queue<StreamsDatum> persistQueue) {
-        this.persistQueue = persistQueue;
-    }
-
-    public Queue<StreamsDatum> getPersistQueue() {
-        return this.persistQueue;
-    }
-
     @Override
     public void write(StreamsDatum entry) {
 
         try {
             String text = mapper.writeValueAsString(entry);
 
-            String hash = GuidUtils.generateGuid(text);
-
-            KeyedMessage<String, String> data = new KeyedMessage<String, String>(config.getTopic(), hash, text);
+            KeyedMessage<String, String> data = new KeyedMessage<String, String>(config.getTopic(), entry.getId(), text);
 
             producer.send(data);
 
@@ -109,19 +88,15 @@ public class KafkaPersistWriter implements StreamsPersistWriter, Serializable, R
     }
 
     @Override
-    public void run() {
-        start();
-
-        // stop();
-    }
-
-    @Override
     public void prepare(Object configurationObject) {
+        this.persistQueue  = new ConcurrentLinkedQueue<StreamsDatum>();
+
         start();
+
     }
 
     @Override
     public void cleanUp() {
-        stop();
+        producer.close();
     }
 }

@@ -18,6 +18,7 @@
 
 package org.apache.streams.kafka;
 
+import com.google.common.base.Preconditions;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.message.MessageAndMetadata;
@@ -44,18 +45,17 @@ public class KafkaPersistReaderTask implements Runnable {
     @Override
     public void run() {
 
-        MessageAndMetadata<String,String> item;
-        while(true) {
+        Preconditions.checkNotNull(this.stream);
 
-            ConsumerIterator<String, String> it = stream.iterator();
-            while (it.hasNext()) {
-                item = it.next();
-                reader.persistQueue.add(new StreamsDatum(item.message()));
-            }
-            try {
-                Thread.sleep(new Random().nextInt(100));
-            } catch (InterruptedException e) {}
+        ConsumerIterator<String, String> it = stream.iterator();
+        while (it.hasNext()) {
+            MessageAndMetadata<String,String> item = it.next();
+            reader.persistQueue.add(new StreamsDatum(item.message()));
         }
+        try {
+            Thread.sleep(new Random().nextInt(100));
+        } catch (InterruptedException e) {}
+
 
     }
 

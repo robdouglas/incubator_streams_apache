@@ -24,17 +24,15 @@ package org.apache.streams.kafka;
 import kafka.producer.Partitioner;
 import kafka.utils.VerifiableProperties;
 
-public class StreamsPartitioner implements Partitioner<String> {
+public class StreamsPartitioner implements Partitioner {
+
     public StreamsPartitioner (VerifiableProperties props) {
 
     }
 
-    public int partition(String key, int a_numPartitions) {
+    public int partition(Object key, int a_numPartitions) {
         int partition = 0;
-        int offset = key.lastIndexOf('.');
-        if (offset > 0) {
-            partition = Integer.parseInt( key.substring(offset+1)) % a_numPartitions;
-        }
+        partition = key.hashCode() % a_numPartitions;
         return partition;
     }
 

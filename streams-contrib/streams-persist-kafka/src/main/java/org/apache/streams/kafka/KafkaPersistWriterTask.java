@@ -38,7 +38,7 @@ public class KafkaPersistWriterTask implements Runnable {
     public void run() {
 
         while(true) {
-            if( writer.getPersistQueue().peek() != null ) {
+            if( writer.persistQueue.peek() != null ) {
                 try {
                     StreamsDatum entry = writer.persistQueue.remove();
                     writer.write(entry);

@@ -19,6 +19,7 @@
 package org.apache.streams.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Queues;
 import com.typesafe.config.Config;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
@@ -28,6 +29,7 @@ import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.serializer.StringDecoder;
 import kafka.utils.VerifiableProperties;
 import org.apache.streams.config.StreamsConfigurator;
+import org.apache.streams.core.DatumStatusCounter;
 import org.apache.streams.core.StreamsDatum;
 import org.apache.streams.core.StreamsPersistReader;
 import org.apache.streams.core.StreamsResultSet;
@@ -65,40 +67,11 @@ public class KafkaPersistReader implements StreamsPersistReader, Serializable {
     private ExecutorService executor = Executors.newSingleThreadExecutor();
 
     public KafkaPersistReader() {
-        Config config = StreamsConfigurator.config.getConfig("kafka");
-        this.config = KafkaConfigurator.detectConfiguration(config);
-        this.persistQueue  = new ConcurrentLinkedQueue<StreamsDatum>();
+        this(KafkaConfigurator.detectConfiguration(StreamsConfigurator.config.getConfig("kafka")));
     }
 
-    public KafkaPersistReader(Queue<StreamsDatum> persistQueue) {
-        Config config = StreamsConfigurator.config.getConfig("kafka");
-        this.config = KafkaConfigurator.detectConfiguration(config);
-        this.persistQueue = persistQueue;
-    }
-
-    public void setConfig(KafkaConfiguration config) {
+    public KafkaPersistReader(KafkaConfiguration config) {
         this.config = config;
-    }
-
-    @Override
-    public void startStream() {
-
-        Properties props = new Properties();
-        props.setProperty("serializer.encoding", "UTF8");
-
-        consumerConfig = new ConsumerConfig(props);
-
-        consumerConnector = Consumer.createJavaConsumerConnector(consumerConfig);
-
-        Whitelist topics = new Whitelist(config.getTopic());
-        VerifiableProperties vprops = new VerifiableProperties(props);
-
-        inStreams = consumerConnector.createMessageStreamsByFilter(topics, 1, new StringDecoder(vprops), new StringDecoder(vprops));
-
-        for (final KafkaStream stream : inStreams) {
-            executor.submit(new KafkaPersistReaderTask(this, stream));
-        }
-
     }
 
     @Override
@@ -107,8 +80,24 @@ public class KafkaPersistReader implements StreamsPersistReader, Serializable {
     }
 
     @Override
+    public void startStream() {
+
+        for (final KafkaStream stream : inStreams) {
+            executor.submit(new KafkaPersistReaderTask(this, stream));
+        }
+    }
+
+    @Override
     public StreamsResultSet readCurrent() {
-        return null;
+
+        StreamsResultSet current;
+
+        synchronized( KafkaPersistReader.class ) {
+            current = new StreamsResultSet(Queues.newConcurrentLinkedQueue(persistQueue));
+            persistQueue.clear();
+        }
+
+        return current;
     }
 
     @Override
@@ -126,28 +115,31 @@ public class KafkaPersistReader implements StreamsPersistReader, Serializable {
         return !executor.isShutdown() && !executor.isTerminated();
     }
 
-    private static ConsumerConfig createConsumerConfig(String a_zookeeper, String a_groupId) {
-        Properties props = new Properties();
-        props.put("zookeeper.connect", a_zookeeper);
-        props.put("group.id", a_groupId);
-        props.put("zookeeper.session.timeout.ms", "400");
-        props.put("zookeeper.sync.time.ms", "200");
-        props.put("auto.commit.interval.ms", "1000");
-        return new ConsumerConfig(props);
-    }
-
     @Override
     public void prepare(Object configurationObject) {
 
+        Properties props = new Properties();
+        props.put("zookeeper.connect", config.getZkconnect());
+        props.put("group.id", "streams");
+        props.put("zookeeper.session.timeout.ms", "1000");
+        props.put("zookeeper.sync.time.ms", "200");
+        props.put("auto.commit.interval.ms", "1000");
+        props.put("auto.offset.reset", "smallest");
+
+        consumerConfig = new ConsumerConfig(props);
+
+        consumerConnector = Consumer.createJavaConsumerConnector(consumerConfig);
+
+        Whitelist topics = new Whitelist(config.getTopic());
+        VerifiableProperties vprops = new VerifiableProperties(props);
+
+        inStreams = consumerConnector.createMessageStreamsByFilter(topics, 1, new StringDecoder(vprops), new StringDecoder(vprops));
+
+        persistQueue = new ConcurrentLinkedQueue<>();
     }
 
     @Override
     public void cleanUp() {
         consumerConnector.shutdown();
-        while( !executor.isTerminated()) {
-            try {
-                executor.awaitTermination(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {}
-        }
     }
 }
