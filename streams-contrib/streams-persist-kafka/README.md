@@ -13,7 +13,7 @@ Example reader/writer configuration:
     
     kafka.groupid=group
     
-java    -cp jar -Dconfig.file={json/hocon typesafe config} \
+java -cp streams.jar -Dconfig.file=application.conf \
         -Dkafka.metadata.broker.list=localhost:9092 class \
         -Dkafka.zk.connect=localhost:2181 \
         -Dkafka.topic=topic \
